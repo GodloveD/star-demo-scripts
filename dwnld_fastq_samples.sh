@@ -1,5 +1,3 @@
-#!/bin/bash
-
 show_help() {
     echo "${0} < integer file number >"
 }
