@@ -11,25 +11,25 @@ from collections import defaultdict
 
 
 
-def create_results_dirs(idir, sdir):
-    os.makedirs(sdir, exist_ok = True)
+def create_results_dirs(fastqs_dir, results_dir):
+    os.makedirs(results_dir, exist_ok = True)
     sample_re = re.compile("([^/]+).fastq.gz$")
-    input_file_list = set([sample_re.search(file).group(1) for file in glob.glob(os.path.join(idir, "*.fastq.gz"))])
+    input_file_list = set([sample_re.search(file).group(1) for file in glob.glob(os.path.join(fastqs_dir, "*.fastq.gz"))])
 
-    # # debugging
-    # print(input_file_list)
+    # debugging
+    print(input_file_list)
 
     for file in input_file_list:
-        results_dir_path = os.path.join(sdir, file)
+        results_dir_path = os.path.join(results_dir, file)
         os.makedirs(results_dir_path, exist_ok = True)
 
 # loads the genome into shared memory so all STAR procs can use that copy
-def startup(gdir, wdir):
+def startup(genome_dir, wdir):
     # mode here is important - "LoadAndExit" specifies that it should be stored 
     # in shared mem, would be "NoSharedMemory" otherwise
     print("Loading genome...")
-    print('subprocess.run(["STAR", "--genomeDir", ' + gdir + ', "--genomeLoad", "LoadAndExit"], cwd=' + wdir + ', shell=False)')
-    subprocess.run(["STAR", "--genomeDir", gdir, "--genomeLoad", "LoadAndExit"], cwd=wdir, shell=False)
+    print('subprocess.run(["STAR", "--genomeDir", ' + genome_dir + ', "--genomeLoad", "LoadAndExit"], cwd=' + wdir + ', shell=False)')
+    subprocess.run(["STAR", "--genomeDir", genome_dir, "--genomeLoad", "LoadAndExit"], cwd=wdir, shell=False)
     print("Genome loaded!")
     
 # takes a sample folder name
@@ -42,15 +42,15 @@ def run_workflow(file_dir):
 
     # get all the fastqs from the fastq storage corresponding to the folder
     # name given
-    # sample_files = [f for f in glob.glob("/data/fastqs/" + sdir + "*")]
+    # sample_files = [f for f in glob.glob("/data/fastqs/" + results_dir + "*")]
     print(file_dir)
     fname = os.path.basename(file_dir)
-    sample_file = os.path.join(idir, fname  + ".fastq.gz")
+    sample_file = os.path.join(fastqs_dir, fname  + ".fastq.gz")
     print(sample_file)
 
     # make a subdirectory for results
     # this is where we should make the first results dir
-    cwd_path = os.path.join(odir, fname, "Pass1")
+    cwd_path = os.path.join(results_dir, fname, "Pass1")
     os.makedirs(cwd_path, exist_ok = True)
  
     print("Running STAR...")
@@ -103,7 +103,7 @@ def run_workflow(file_dir):
            "--runThreadN",
            str(procs),
            "--genomeDir",
-           gdir,
+           genome_dir,
            "--readFilesIn",
            sample_file
            ]
@@ -145,7 +145,7 @@ def run_workflow(file_dir):
 #                         "./Aligned.out.sorted.bam"
 #                         ], cwd=cwd_path, shell=False)
 # 
-#         htseq_out = open("/data/results/" + sdir + "/Pass1/htseq-count.txt", "w+")
+#         htseq_out = open("/data/results/" + results_dir + "/Pass1/htseq-count.txt", "w+")
 # 
 #         print("Running htseq...")
 # 
@@ -165,7 +165,7 @@ def run_workflow(file_dir):
 #                         "/data/STAR/Saccharomyces_cerevisiae.R64-1-1.79.gtf",
 #                         ], cwd=cwd_path, shell=False, stdout=htseq_out)
 #     if(velocyto):
-#         bam_files = [f for f in glob.glob("/data/results/" + sdir + "/Pass1/Aligned.out.sorted.bam")]
+#         bam_files = [f for f in glob.glob("/data/results/" + results_dir + "/Pass1/Aligned.out.sorted.bam")]
 #         #add velocyto run here - only works over human and mouse genomes
 #         subprocess.run()
 # 
@@ -173,14 +173,13 @@ def run_workflow(file_dir):
 
 
 if __name__ == "__main__":                                                                                            
-    global idir 
-    global odir
-    global gdir
+    global fastqs_dir 
+    global results_dir
+    global genome_dir
     global procs
-    idir = "/data/fastqs"
-    gdir = "/data/STAR/genome"
-    sdir = "/sdir/fastqs"
-    odir = "/data/results"                                                      
+    fastqs_dir = "/data/fastqs"
+    genome_dir = "/data/STAR/genome"
+    results_dir = "/data/results"                                                      
     wdir = "/data"
     procs = 8
     # if len(sys.argv) > 5:                                                       
@@ -190,22 +189,22 @@ if __name__ == "__main__":
     # elif len(sys.argv) == 4:
     #     wdir = syst.argv[3]
     # elif len(sys.argv) == 3:                                                    
-    #     odir = sys.argv[2]                                                      
+    #     results_dir = sys.argv[2]                                                      
     # elif len(sys.argv) == 2:                                                    
-    #     idir = sys.argv[1]                                                      
+    #     fastqs_dir = sys.argv[1]                                                      
                                                                                 
-    create_results_dirs(idir, odir) 
+    create_results_dirs(fastqs_dir, results_dir) 
 
     #load genome
-    startup(gdir, wdir)
+    startup(genome_dir, wdir)
 
     # create processor pool
     pool = Pool(processes=int(procs))
     print("Processor pool loaded!")
 
     #grab all the input folders that were created by the preprocessing step
-    # input_folder_list = sorted([os.path.basename(f) for f in glob.glob(os.path.join(odir, "*"))])
-    input_folder_list = sorted(glob.glob(os.path.join(odir, "*")))
+    # input_folder_list = sorted([os.path.basename(f) for f in glob.glob(os.path.join(results_dir, "*"))])
+    input_folder_list = sorted(glob.glob(os.path.join(results_dir, "*")))
     print(input_folder_list)
     print("Inputs enumerated with len: " + str(len(input_folder_list)))
     pool.map(run_workflow, input_folder_list)
