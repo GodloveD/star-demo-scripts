@@ -11,17 +11,17 @@ from collections import defaultdict
 
 
 
-def create_results_dirs(fastqs_dir, results_dir):
-    os.makedirs(results_dir, exist_ok = True)
-    sample_re = re.compile("([^/]+).fastq.gz$")
-    input_file_list = set([sample_re.search(file).group(1) for file in glob.glob(os.path.join(fastqs_dir, "*.fastq.gz"))])
-
-    # debugging
-    print(input_file_list)
-
-    for file in input_file_list:
-        results_dir_path = os.path.join(results_dir, file)
-        os.makedirs(results_dir_path, exist_ok = True)
+# def create_results_dirs(fastqs_dir, results_dir):
+#     os.makedirs(results_dir, exist_ok = True)
+#     sample_re = re.compile("([^/]+).fastq.gz$")
+#     input_file_list = set([sample_re.search(file).group(1) for file in glob.glob(os.path.join(fastqs_dir, "*.fastq.gz"))])
+# 
+#     # debugging
+#     print(input_file_list)
+# 
+#     for file in input_file_list:
+#         results_dir_path = os.path.join(results_dir, file)
+#         os.makedirs(results_dir_path, exist_ok = True)
 
 # loads the genome into shared memory so all STAR procs can use that copy
 def startup(genome_dir, wdir):
@@ -33,7 +33,7 @@ def startup(genome_dir, wdir):
     print("Genome loaded!")
     
 # takes a sample folder name
-def run_workflow(file_dir):
+def run_workflow(file):
 
     velocyto = False
     h5ad = True
@@ -43,8 +43,7 @@ def run_workflow(file_dir):
     # get all the fastqs from the fastq storage corresponding to the folder
     # name given
     # sample_files = [f for f in glob.glob("/data/fastqs/" + results_dir + "*")]
-    print(file_dir)
-    fname = os.path.basename(file_dir)
+    print(file)
     sample_file = os.path.join(fastqs_dir, fname  + ".fastq.gz")
     print(sample_file)
 
@@ -193,7 +192,7 @@ if __name__ == "__main__":
     # elif len(sys.argv) == 2:                                                    
     #     fastqs_dir = sys.argv[1]                                                      
                                                                                 
-    create_results_dirs(fastqs_dir, results_dir) 
+    # create_results_dirs(fastqs_dir, results_dir) 
 
     #load genome
     startup(genome_dir, wdir)
@@ -204,9 +203,11 @@ if __name__ == "__main__":
 
     #grab all the input folders that were created by the preprocessing step
     # input_folder_list = sorted([os.path.basename(f) for f in glob.glob(os.path.join(results_dir, "*"))])
-    input_folder_list = sorted(glob.glob(os.path.join(results_dir, "*")))
-    print(input_folder_list)
-    print("Inputs enumerated with len: " + str(len(input_folder_list)))
-    pool.map(run_workflow, input_folder_list)
+    # input_folder_list = sorted(glob.glob(os.path.join(results_dir, "*")))
+    sample_re = re.compile("([^/]+).fastq.gz$")
+    input_file_list = set([sample_re.search(file).group(1) for file in glob.glob(os.path.join(fastqs_dir, "*.fastq.gz"))])
+    print(input_file_list)
+    print("Inputs enumerated with len: " + str(len(input_file_list)))
+    pool.map(run_workflow, input_file_list)
     #run the workflow - pool.map basically says run this method (run_workflow) with this set of inputs (input_folder_list) using the processors we defined (16)
     #might need a couple vars here passed in from the workflow to tell whether the h5ad, loom, or both types of output files should be generated
