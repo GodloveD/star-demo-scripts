@@ -35,11 +35,15 @@ Escherichia_coli_str_k_12_substr_mg1655.GCA_000005845.1.21.dna_sm.toplevel.fa.gz
 if [ $ALL -eq 1 ]; then
     for LINK in ${LINK_LIST}; do
         wget "${LINK_PREFIX}${LINK}"
+        gunzip $LINK
     done
 else
     LINK="Escherichia_coli_str_k_12_substr_mg1655.GCA_000005845.1.21.dna.genome.fa.gz"
     wget "${LINK_PREFIX}${LINK}"
+    gunzip $LINK
 fi
 
 # download annotations in gtf format
 wget "ftp://ftp.ensemblgenomes.org/pub/release-21/bacteria//gtf/bacteria_22_collection/escherichia_coli_str_k_12_substr_mg1655/Escherichia_coli_str_k_12_substr_mg1655.GCA_000005845.1.21.gtf.gz"
+gunzip Escherichia_coli_str_k_12_substr_mg1655.GCA_000005845.1.21.gtf.gz
+
