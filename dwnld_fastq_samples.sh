@@ -44,7 +44,7 @@ if [ "${FASTQ_FILES}X" == "X" ]; then
 fi
 
 for FILE in $FASTQ_FILES; do
-    wget -O "${FILE}.fq.gz" "https://trace.ncbi.nlm.nih.gov/Traces/sra-reads-be/fastq?acc=${FILE}"
+    wget -O "${FILE}.fastq.gz" "https://trace.ncbi.nlm.nih.gov/Traces/sra-reads-be/fastq?acc=${FILE}"
 done
 
 
