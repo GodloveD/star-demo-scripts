@@ -5,6 +5,7 @@ import os
 import anndata
 import pandas as pd
 import scipy.sparse as sp
+import numpy as np
 import io
 import csv
 import argparse
@@ -37,6 +38,7 @@ def gen_gene_table(rdir):
         gene_cell_counts,
         obs=pd.DataFrame(index=sample_names),
         var=pd.DataFrame(index=gene_list),
+        dtype=np.float32
     )
 
     adata.write_h5ad(os.path.join(rdir, "output"))
