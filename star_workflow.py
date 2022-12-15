@@ -15,7 +15,7 @@ def startup():
     # in shared mem, would be "NoSharedMemory" otherwise
     print("Loading genome...")
     cmd = ["STAR", "--genomeDir", genome_dir, "--genomeLoad", "LoadAndExit"]
-    print(cmd)
+    # print(cmd)
     subprocess.run(cmd, cwd=wdir, shell=False)
     print("Genome loaded!")
     
@@ -28,9 +28,9 @@ def run_workflow(file):
     # get all the fastqs from the fastq storage corresponding to the folder
     # name given
     # sample_files = [f for f in glob.glob("/data/fastqs/" + results_dir + "*")]
-    print(file)
+    # print(file)
     sample_file = os.path.join(fastqs_dir, file  + ".fastq.gz")
-    print(sample_file)
+    # print(sample_file)
 
     # make a subdirectory for results
     # this is where we should make the first results dir
@@ -85,49 +85,48 @@ def run_workflow(file):
            "--readFilesCommand",
            "zcat",
            "--runThreadN",
-           str(procs),
+           str(threads),
            "--genomeDir",
            genome_dir,
            "--readFilesIn",
            sample_file
            ]
 
-#     print(cmd)
-#     subprocess.run(cmd, cwd=cwd_path, shell=False)
+    # print(cmd)
+    subprocess.run(cmd, cwd=cwd_path, shell=False)
 
-#     print("Running samtools sort...")
-#     
-#     # intermediate samtools steps that run sequentially and only take seconds 
-#     # to complete for each sample
-#     subprocess.run(["samtools", 
-#                     "sort", 
-#                     "-m", 
-#                     "6000000000", 
-#                     "-o", 
-#                     "./Aligned.out.sorted.bam",
-#                     "./Aligned.out.bam"
-#                     ], cwd=cwd_path, shell=False)
-# 
-#     print("Running samtools index...")
-# 
-#     subprocess.run(["samtools", 
-#                     "index",
-#                     "-b",
-#                     "./Aligned.out.sorted.bam"
-#                     ], cwd=cwd_path, shell=False)
-# 
-# 
-#     print("Running samtools htgen...")
-#     
-#     subprocess.run(["samtools",
-#                     "sort",
-#                     "-m",
-#                     "6000000000",
-#                     "-n",
-#                     "-o",
-#                     "./Aligned.out.sorted-byname.bam",
-#                     "./Aligned.out.sorted.bam"
-#                     ], cwd=cwd_path, shell=False)
+    print("Running samtools sort...")
+    
+    # intermediate samtools steps that run sequentially and only take seconds 
+    # to complete for each sample
+    subprocess.run(["samtools", 
+                    "sort", 
+                    "-m", 
+                    "6000000000", 
+                    "-o", 
+                    "./Aligned.out.sorted.bam",
+                    "./Aligned.out.bam"
+                    ], cwd=cwd_path, shell=False)
+
+    print("Running samtools index...")
+
+    subprocess.run(["samtools", 
+                    "index",
+                    "-b",
+                    "./Aligned.out.sorted.bam"
+                    ], cwd=cwd_path, shell=False)
+
+    print("Running samtools htgen...")
+    
+    subprocess.run(["samtools",
+                    "sort",
+                    "-m",
+                    "6000000000",
+                    "-n",
+                    "-o",
+                    "./Aligned.out.sorted-byname.bam",
+                    "./Aligned.out.sorted.bam"
+                    ], cwd=cwd_path, shell=False)
 
     htseq_out = open(os.path.join(cwd_path, "htseq-count.txt"), "w+")
 
@@ -149,17 +148,17 @@ def run_workflow(file):
                         "./Aligned.out.sorted-byname.bam",
                         os.path.join(ref_dir, "Escherichia_coli_str_k_12_substr_mg1655.GCA_000005845.1.21.gtf"),
                         ], cwd=cwd_path, shell=False, stdout=htseq_out)
-    print("Done!")
 
 
-if __name__ == "__main__":                                                                                            
-    # i know how this looks i'm not proud
+if __name__ == "__main__":  
+
     global wdir
     global fastqs_dir 
     global ref_dir
     global genome_dir
     global results_dir
-    global procs
+    global threads
+    global gtf_file
     
     parser = argparse.ArgumentParser()
 
@@ -188,8 +187,15 @@ if __name__ == "__main__":
     parser.add_argument('--procs',         
         type=int, 
         help='''the number of processes (for simultaneous STAR runs sharing the 
-             loaded reference)''', 
-        default=1)
+             loaded reference) defaults to the number of files''')
+    parser.add_argument('--threads',         
+        type=int, 
+        help='''the number of threads for each STAR process''', 
+        default=4)
+    parser.add_argument('--gtf_file',         
+        type=str, 
+        help='''the name of the gtf index file (assumed to be in the ref_dir))''', 
+        default="Escherichia_coli_str_k_12_substr_mg1655.GCA_000005845.1.21.gtf")
 
     args = parser.parse_args()
 
@@ -199,6 +205,8 @@ if __name__ == "__main__":
     genome_dir  = args.genome_dir
     results_dir = args.results_dir
     procs       = args.procs
+    threads     = args.threads
+    gtf_file    = args.gtf_file
 
     #load genome
     startup()
@@ -206,12 +214,14 @@ if __name__ == "__main__":
     # grab all the input files that were downloaded
     sample_re = re.compile("([^/]+).fastq.gz$")
     input_file_list = set([sample_re.search(file).group(1) for file in glob.glob(os.path.join(fastqs_dir, "*.fastq.gz"))])
-    print(input_file_list)
+    # print(input_file_list)
     print("Inputs enumerated with len: " + str(len(input_file_list)))
 
     # create processor pool
-    # pool = Pool(processes=len(input_file_list))
-    pool = Pool(1)
+    if procs is None:
+        pool = Pool(processes=len(input_file_list))
+    else:
+        pool = Pool(processes=procs)
     print("Processor pool loaded!")
     
     # run the workflow - pool.map basically says run this method (run_workflow) 
@@ -219,3 +229,4 @@ if __name__ == "__main__":
     # defined (default 16)
     pool.map(run_workflow, input_file_list)
     
+    print("Done!")
